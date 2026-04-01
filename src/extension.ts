@@ -4,7 +4,7 @@ import { FlashcardProvider } from './FlashcardProvider';
 export function activate(context: vscode.ExtensionContext) {
     console.log('Congratulations, your extension "vscode-flashcards" is now active!');
 
-    const provider = new FlashcardProvider(context.extensionUri);
+    const provider = new FlashcardProvider(context);
 
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider(FlashcardProvider.viewType, provider)
@@ -25,6 +25,10 @@ export function activate(context: vscode.ExtensionContext) {
                 const fileData = await vscode.workspace.fs.readFile(fileUri);
                 const csvContent = Buffer.from(fileData).toString('utf8');
                 provider.loadCSV(csvContent);
+                
+                // Save the loaded file URI to workspace state for auto-loading
+                context.workspaceState.update('lastLoadedCsvUri', fileUri.toString());
+                
                 // Also focus the view
                 vscode.commands.executeCommand('flashcards-view.focus');
             }

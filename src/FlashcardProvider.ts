@@ -5,7 +5,7 @@ export class FlashcardProvider implements vscode.WebviewViewProvider {
     private _view?: vscode.WebviewView;
 
     constructor(
-        private readonly _extensionUri: vscode.Uri,
+        private readonly _context: vscode.ExtensionContext,
     ) { }
 
     public resolveWebviewView(
@@ -17,7 +17,7 @@ export class FlashcardProvider implements vscode.WebviewViewProvider {
 
         webviewView.webview.options = {
             enableScripts: true,
-            localResourceRoots: [this._extensionUri]
+            localResourceRoots: [this._context.extensionUri]
         };
 
         webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
@@ -31,6 +31,25 @@ export class FlashcardProvider implements vscode.WebviewViewProvider {
                     }
             }
         });
+
+        const lastLoadedUriStr = this._context.workspaceState.get<string>('lastLoadedCsvUri');
+        if (lastLoadedUriStr) {
+            try {
+                const fileUri = vscode.Uri.parse(lastLoadedUriStr);
+                vscode.workspace.fs.readFile(fileUri).then(
+                    fileData => {
+                        const csvContent = Buffer.from(fileData).toString('utf8');
+                        this.loadCSV(csvContent);
+                    },
+                    _error => {
+                        // File might have been deleted, clean up state
+                        this._context.workspaceState.update('lastLoadedCsvUri', undefined);
+                    }
+                );
+            } catch (e) {
+                // Ignore parsing errors
+            }
+        }
     }
 
     public async loadCSV(csvContent: string) {
