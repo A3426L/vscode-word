@@ -194,6 +194,23 @@ export class FlashcardProvider implements vscode.WebviewViewProvider {
                         font-size: 0.9em;
                         color: var(--vscode-descriptionForeground);
                     }
+
+                    .bottom-controls {
+                        display: flex;
+                        gap: 8px;
+                        margin-top: 10px;
+                        width: 100%;
+                        justify-content: center;
+                    }
+
+                    .btn-shuffle {
+                        background: var(--vscode-button-secondaryBackground);
+                        color: var(--vscode-button-secondaryForeground);
+                    }
+
+                    .btn-shuffle:hover {
+                        background: var(--vscode-button-secondaryHoverBackground);
+                    }
                 </style>
             </head>
             <body>
@@ -217,7 +234,10 @@ export class FlashcardProvider implements vscode.WebviewViewProvider {
                         </div>
                     </div>
                     
-                    <button id="btn-load-new">Load Different CSV</button>
+                    <div class="bottom-controls">
+                        <button id="btn-shuffle" class="btn-shuffle">🔀 Shuffle</button>
+                        <button id="btn-load-new">Load CSV</button>
+                    </div>
                 </div>
 
                 <script>
@@ -261,6 +281,16 @@ export class FlashcardProvider implements vscode.WebviewViewProvider {
                     });
                     document.getElementById('btn-load-new').addEventListener('click', () => {
                         vscode.postMessage({ type: 'requestLoad' });
+                    });
+
+                    // Shuffle (Fisher-Yates)
+                    document.getElementById('btn-shuffle').addEventListener('click', () => {
+                        for (let i = cards.length - 1; i > 0; i--) {
+                            const j = Math.floor(Math.random() * (i + 1));
+                            [cards[i], cards[j]] = [cards[j], cards[i]];
+                        }
+                        currentIndex = 0;
+                        updateCard();
                     });
 
                     function updateCard() {
