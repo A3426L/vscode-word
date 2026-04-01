@@ -10,9 +10,6 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [
-    "onView:flashcards-view"
-  ],
   "main": "./out/extension.js",
   "contributes": {
     "views": {
@@ -32,8 +29,7 @@
       },
       {
         "command": "flashcards.shuffle",
-        "title": "Shuffle Flashcards",
-        "icon": "$(arrow-swap)"
+        "title": "🔀"
       }
     ],
     "menus": {

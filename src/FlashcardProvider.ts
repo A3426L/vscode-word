@@ -209,13 +209,6 @@ export class FlashcardProvider implements vscode.WebviewViewProvider {
                         justify-content: center;
                     }
 
-                    .btn-shuffle {
-                        background: var(--vscode-button-secondaryBackground);
-                        color: var(--vscode-button-secondaryForeground);
-                    }
-
-                    .btn-shuffle:hover {
-                        background: var(--vscode-button-secondaryHoverBackground);
                     }
                 </style>
             </head>
@@ -241,7 +234,6 @@ export class FlashcardProvider implements vscode.WebviewViewProvider {
                     </div>
                     
                     <div class="bottom-controls">
-                        <button id="btn-shuffle" class="btn-shuffle">🔀 Shuffle</button>
                         <button id="btn-load-new">Load CSV</button>
                     </div>
                 </div>
@@ -287,16 +279,6 @@ export class FlashcardProvider implements vscode.WebviewViewProvider {
                     });
                     document.getElementById('btn-load-new').addEventListener('click', () => {
                         vscode.postMessage({ type: 'requestLoad' });
-                    });
-
-                    // Shuffle (Fisher-Yates)
-                    document.getElementById('btn-shuffle').addEventListener('click', () => {
-                        for (let i = cards.length - 1; i > 0; i--) {
-                            const j = Math.floor(Math.random() * (i + 1));
-                            [cards[i], cards[j]] = [cards[j], cards[i]];
-                        }
-                        currentIndex = 0;
-                        updateCard();
                     });
 
                     function updateCard() {
