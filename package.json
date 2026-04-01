@@ -34,6 +34,11 @@
           "light": "media/shuffle-light.svg",
           "dark": "media/shuffle-dark.svg"
         }
+      },
+      {
+        "command": "flashcards.bookmark",
+        "title": "Bookmark Location",
+        "icon": "$(bookmark)"
       }
     ],
     "menus": {
@@ -45,6 +50,11 @@
         },
         {
           "command": "flashcards.shuffle",
+          "when": "view == flashcards-view",
+          "group": "navigation"
+        },
+        {
+          "command": "flashcards.bookmark",
           "when": "view == flashcards-view",
           "group": "navigation"
         }

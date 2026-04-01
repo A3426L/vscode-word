@@ -3,6 +3,10 @@ import * as vscode from 'vscode';
 export class FlashcardProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'flashcards-view';
     private _view?: vscode.WebviewView;
+    private _currentIndex: number = 0;
+    private _currentQuestion: string = '';
+    private _currentOrder: string[] = [];
+    private _currentFileUri?: vscode.Uri;
 
     constructor(
         private readonly _context: vscode.ExtensionContext,
@@ -29,6 +33,17 @@ export class FlashcardProvider implements vscode.WebviewViewProvider {
                         vscode.commands.executeCommand('flashcards.loadCSV');
                         break;
                     }
+                case 'updateIndex':
+                    {
+                        this._currentIndex = data.index;
+                        this._currentQuestion = data.question;
+                        break;
+                    }
+                case 'updateOrder':
+                    {
+                        this._currentOrder = data.order;
+                        break;
+                    }
             }
         });
 
@@ -39,7 +54,10 @@ export class FlashcardProvider implements vscode.WebviewViewProvider {
                 vscode.workspace.fs.readFile(fileUri).then(
                     fileData => {
                         const csvContent = Buffer.from(fileData).toString('utf8');
-                        this.loadCSV(csvContent);
+                        const bookmarkedIndex = this._context.workspaceState.get<number>(`bookmark_${fileUri.toString()}`) || 0;
+                        const bookmarkedQuestion = this._context.workspaceState.get<string>(`bookmark_q_${fileUri.toString()}`);
+                        const savedOrder = this._context.workspaceState.get<string[]>(`bookmark_order_${fileUri.toString()}`);
+                        this.loadCSV(csvContent, fileUri, bookmarkedIndex, bookmarkedQuestion, savedOrder);
                     },
                     _error => {
                         // File might have been deleted, clean up state
@@ -52,12 +70,13 @@ export class FlashcardProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    public async loadCSV(csvContent: string) {
+    public async loadCSV(csvContent: string, fileUri?: vscode.Uri, startIndex: number = 0, targetQuestion?: string, savedOrder?: string[]) {
         if (this._view) {
             this._view.show?.(true);
-            
+            this._currentFileUri = fileUri;
+            this._currentIndex = startIndex;
             // Simple CSV parser
-            const cards = [];
+            const rawCards = [];
             const lines = csvContent.split(/\r?\n/);
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
@@ -79,21 +98,78 @@ export class FlashcardProvider implements vscode.WebviewViewProvider {
                 }
 
                 if (matches.length >= 2) {
-                    // Assume first row is header if it has words like "question" "answer" "問題" "答え" 
-                    if (i === 0 && (
-                        matches[0].toLowerCase().includes('question') || 
-                        matches[0].includes('問題') ||
-                        matches[1].toLowerCase().includes('answer') ||
-                        matches[1].includes('答え')
-                    )) {
+                    // Always skip the first row as it's typically a header (column names)
+                    if (i === 0) {
                         continue;
                     }
-                    cards.push({ question: matches[0], answer: matches[1] });
+                    rawCards.push({ question: matches[0], answer: matches[1] });
                 }
             }
 
-            this._view.webview.postMessage({ type: 'loadCards', cards: cards });
+            const cards = [...rawCards];
+
+            // Reorder based on savedOrder if provided
+            if (savedOrder && savedOrder.length > 0) {
+                const cardMap = new Map(cards.map(c => [c.question, c]));
+                const reorderedCards = [];
+                const seenQuestions = new Set();
+
+                // Fill from saved order
+                for (const q of savedOrder) {
+                    const card = cardMap.get(q);
+                    if (card) {
+                        reorderedCards.push(card);
+                        seenQuestions.add(q);
+                    }
+                }
+
+                // Append any new cards that weren't in the saved order
+                for (const card of cards) {
+                    if (!seenQuestions.has(card.question)) {
+                        reorderedCards.push(card);
+                    }
+                }
+
+                if (reorderedCards.length > 0) {
+                    cards.length = 0;
+                    cards.push(...reorderedCards);
+                }
+            }
+
+            this._currentOrder = cards.map(c => c.question);
+
+            let finalStartIndex = startIndex;
+            if (targetQuestion) {
+                const foundIndex = cards.findIndex(c => c.question === targetQuestion);
+                if (foundIndex !== -1) {
+                    finalStartIndex = foundIndex;
+                }
+            }
+
+            this._currentIndex = finalStartIndex;
+            if (cards.length > finalStartIndex) {
+                this._currentQuestion = cards[finalStartIndex].question;
+            }
+
+            this._view.webview.postMessage({ 
+                type: 'loadCards', 
+                cards: cards,
+                originalCards: rawCards,
+                startIndex: finalStartIndex
+            });
         }
+    }
+
+    public bookmarkCurrent() {
+        if (!this._currentFileUri) {
+            vscode.window.showWarningMessage('No CSV file loaded.');
+            return;
+        }
+
+        this._context.workspaceState.update(`bookmark_${this._currentFileUri.toString()}`, this._currentIndex);
+        this._context.workspaceState.update(`bookmark_q_${this._currentFileUri.toString()}`, this._currentQuestion);
+        this._context.workspaceState.update(`bookmark_order_${this._currentFileUri.toString()}`, this._currentOrder);
+        vscode.window.showInformationMessage(`Bookmarked: ${this._currentQuestion}`);
     }
 
     public shuffle() {
@@ -135,9 +211,9 @@ export class FlashcardProvider implements vscode.WebviewViewProvider {
                         background: var(--vscode-button-background);
                         color: var(--vscode-button-foreground);
                         border: none;
-                        padding: 6px 12px;
+                        padding: 6px 16px;
                         cursor: pointer;
-                        border-radius: 2px;
+                        border-radius: 20px;
                     }
 
                     button:hover {
@@ -181,17 +257,28 @@ export class FlashcardProvider implements vscode.WebviewViewProvider {
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                        font-size: 1.5rem;
+                        font-family: var(--vscode-font-family);
                         font-weight: bold;
                         border-radius: 8px;
-                        padding: 20px;
+                        padding: 15px;
                         box-sizing: border-box;
                         text-align: center;
                         box-shadow: 0 4px 8px rgba(0,0,0,0.2);
                         background: var(--vscode-editor-background);
                         color: var(--vscode-editor-foreground);
                         border: 1px solid var(--vscode-panel-border);
-                        word-break: break-word;
+                    }
+
+                    .card-text {
+                        display: -webkit-box;
+                        -webkit-line-clamp: 6; /* Maximum lines before ellipsis */
+                        -webkit-box-orient: vertical;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        word-break: break-all;
+                        width: 100%;
+                        font-size: 1.2rem; /* Adjusted for longer text */
+                        line-height: 1.4;
                     }
 
                     .card__face--back {
@@ -249,6 +336,8 @@ export class FlashcardProvider implements vscode.WebviewViewProvider {
                     const vscode = acquireVsCodeApi();
 
                     let cards = [];
+                    let originalCards = [];
+                    let isShuffled = false;
                     let currentIndex = 0;
 
                     const cardElement = document.getElementById('flashcard');
@@ -288,12 +377,20 @@ export class FlashcardProvider implements vscode.WebviewViewProvider {
                     function updateCard() {
                         if (cards.length === 0) return;
                         
+                        // Notify extension about current index and question
+                        const currentCard = cards[currentIndex];
+                        vscode.postMessage({ 
+                            type: 'updateIndex', 
+                            index: currentIndex,
+                            question: currentCard ? currentCard.question : ''
+                        });
+
                         // Force unflip
                         cardElement.classList.remove('is-flipped');
                         
                         setTimeout(() => {
-                            frontElement.textContent = cards[currentIndex].question;
-                            backElement.textContent = cards[currentIndex].answer;
+                            frontElement.innerHTML = \`<div class="card-text">\${cards[currentIndex].question}</div>\`;
+                            backElement.innerHTML = \`<div class="card-text">\${cards[currentIndex].answer}</div>\`;
                             counterElement.textContent = \`\${currentIndex + 1} / \${cards.length}\`;
                             
                             btnPrev.disabled = currentIndex === 0;
@@ -307,21 +404,41 @@ export class FlashcardProvider implements vscode.WebviewViewProvider {
                         switch (message.type) {
                             case 'loadCards':
                                 cards = message.cards;
+                                originalCards = message.originalCards;
+                                // Determine if we are starting shuffled (if cards length > 0 and doesn't match original order)
+                                isShuffled = cards.some((c, i) => originalCards[i] && c.question !== originalCards[i].question);
+
                                 if (cards.length > 0) {
-                                    currentIndex = 0;
+                                    currentIndex = (message.startIndex !== undefined && message.startIndex < cards.length) 
+                                        ? message.startIndex 
+                                        : 0;
                                     emptyState.style.display = 'none';
                                     flashcardContainer.style.display = 'flex';
                                     updateCard();
+                                    
+                                    // Report initial/loaded order
+                                    vscode.postMessage({ type: 'updateOrder', order: cards.map(c => c.question) });
                                 }
                                 break;
                             case 'shuffle':
                                 if (cards.length > 0) {
-                                    for (let i = cards.length - 1; i > 0; i--) {
-                                        const j = Math.floor(Math.random() * (i + 1));
-                                        [cards[i], cards[j]] = [cards[j], cards[i]];
+                                    if (isShuffled) {
+                                        // Reset to original
+                                        cards = [...originalCards];
+                                        isShuffled = false;
+                                    } else {
+                                        // Perform shuffle
+                                        for (let i = cards.length - 1; i > 0; i--) {
+                                            const j = Math.floor(Math.random() * (i + 1));
+                                            [cards[i], cards[j]] = [cards[j], cards[i]];
+                                        }
+                                        isShuffled = true;
                                     }
                                     currentIndex = 0;
                                     updateCard();
+                                    
+                                    // Report new shuffled order
+                                    vscode.postMessage({ type: 'updateOrder', order: cards.map(c => c.question) });
                                 }
                                 break;
                         }

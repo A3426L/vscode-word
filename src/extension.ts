@@ -24,7 +24,12 @@ export function activate(context: vscode.ExtensionContext) {
                 const fileUri = uris[0];
                 const fileData = await vscode.workspace.fs.readFile(fileUri);
                 const csvContent = Buffer.from(fileData).toString('utf8');
-                provider.loadCSV(csvContent);
+                
+                // Fetch bookmarked index for this file
+                const bookmarkedIndex = context.workspaceState.get<number>(`bookmark_${fileUri.toString()}`) || 0;
+                const bookmarkedQuestion = context.workspaceState.get<string>(`bookmark_q_${fileUri.toString()}`);
+                const savedOrder = context.workspaceState.get<string[]>(`bookmark_order_${fileUri.toString()}`);
+                provider.loadCSV(csvContent, fileUri, bookmarkedIndex, bookmarkedQuestion, savedOrder);
                 
                 // Save the loaded file URI to workspace state for auto-loading
                 context.workspaceState.update('lastLoadedCsvUri', fileUri.toString());
@@ -38,6 +43,12 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('flashcards.shuffle', () => {
             provider.shuffle();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('flashcards.bookmark', () => {
+            provider.bookmarkCurrent();
         })
     );
 }
