@@ -30,7 +30,10 @@
       {
         "command": "flashcards.shuffle",
         "title": "Shuffle",
-        "icon": "$(shuffle)"
+        "icon": {
+          "light": "media/shuffle-light.svg",
+          "dark": "media/shuffle-dark.svg"
+        }
       }
     ],
     "menus": {
