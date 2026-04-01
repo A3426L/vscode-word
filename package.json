@@ -25,11 +25,12 @@
       {
         "command": "flashcards.loadCSV",
         "title": "Load Flashcards CSV",
-        "icon": "$(file-text)"
+        "icon": "$(add)"
       },
       {
         "command": "flashcards.shuffle",
-        "title": "🔀"
+        "title": "Shuffle",
+        "icon": "$(shuffle)"
       }
     ],
     "menus": {
