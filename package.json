@@ -1,0 +1,57 @@
+{
+  "name": "vscode-flashcards",
+  "displayName": "Flashcards",
+  "description": "Learn with CSV flashcards right in VS Code",
+  "version": "0.0.1",
+  "publisher": "aru",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:flashcards-view"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "type": "webview",
+          "id": "flashcards-view",
+          "name": "Flashcards"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "flashcards.loadCSV",
+        "title": "Load Flashcards CSV",
+        "icon": "$(file-text)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "flashcards.loadCSV",
+          "when": "view == flashcards-view",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/node": "16.x",
+    "typescript": "^5.1.3"
+  }
+}
