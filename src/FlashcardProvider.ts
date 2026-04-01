@@ -220,14 +220,6 @@ export class FlashcardProvider implements vscode.WebviewViewProvider {
                         color: var(--vscode-descriptionForeground);
                     }
 
-                    .bottom-controls {
-                        display: flex;
-                        gap: 8px;
-                        margin-top: 10px;
-                        width: 100%;
-                        justify-content: center;
-                    }
-
                     }
                 </style>
             </head>
@@ -250,10 +242,6 @@ export class FlashcardProvider implements vscode.WebviewViewProvider {
                             <div class="card__face card__face--front" id="card-front"></div>
                             <div class="card__face card__face--back" id="card-back"></div>
                         </div>
-                    </div>
-                    
-                    <div class="bottom-controls">
-                        <button id="btn-load-new">Load CSV</button>
                     </div>
                 </div>
 
@@ -294,9 +282,6 @@ export class FlashcardProvider implements vscode.WebviewViewProvider {
 
                     // Request CSV from extension
                     document.getElementById('btn-load-empty').addEventListener('click', () => {
-                        vscode.postMessage({ type: 'requestLoad' });
-                    });
-                    document.getElementById('btn-load-new').addEventListener('click', () => {
                         vscode.postMessage({ type: 'requestLoad' });
                     });
 
