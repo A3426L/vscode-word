@@ -77,6 +77,12 @@ export class FlashcardProvider implements vscode.WebviewViewProvider {
         }
     }
 
+    public shuffle() {
+        if (this._view) {
+            this._view.webview.postMessage({ type: 'shuffle' });
+        }
+    }
+
     private _getHtmlForWebview(webview: vscode.Webview) {
         return `<!DOCTYPE html>
             <html lang="en">
@@ -319,6 +325,16 @@ export class FlashcardProvider implements vscode.WebviewViewProvider {
                                     currentIndex = 0;
                                     emptyState.style.display = 'none';
                                     flashcardContainer.style.display = 'flex';
+                                    updateCard();
+                                }
+                                break;
+                            case 'shuffle':
+                                if (cards.length > 0) {
+                                    for (let i = cards.length - 1; i > 0; i--) {
+                                        const j = Math.floor(Math.random() * (i + 1));
+                                        [cards[i], cards[j]] = [cards[j], cards[i]];
+                                    }
+                                    currentIndex = 0;
                                     updateCard();
                                 }
                                 break;

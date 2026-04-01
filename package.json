@@ -29,12 +29,22 @@
         "command": "flashcards.loadCSV",
         "title": "Load Flashcards CSV",
         "icon": "$(file-text)"
+      },
+      {
+        "command": "flashcards.shuffle",
+        "title": "Shuffle Flashcards",
+        "icon": "$(arrow-swap)"
       }
     ],
     "menus": {
       "view/title": [
         {
           "command": "flashcards.loadCSV",
+          "when": "view == flashcards-view",
+          "group": "navigation"
+        },
+        {
+          "command": "flashcards.shuffle",
           "when": "view == flashcards-view",
           "group": "navigation"
         }
